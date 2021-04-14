@@ -1,3 +1,6 @@
+This repository contains the code for reproducibility of DAEMA: Denoising Autoencdoer with Mask Attention. 
+
+
 # How to setup the environment
 ## On Local Machine
 Create & activate the conda enviornment with python3.8.2 version
