@@ -1,4 +1,5 @@
-"""Multi-task implementation of Holoclean"""
+""" Contains the implementation of AimNet, from Holoclean."""
+
 import logging
 
 import torch
@@ -8,76 +9,101 @@ from tqdm import tqdm
 import numpy as np
 
 
-def masked_loss_func(output, mask, batch_data):
-    if mask is None:
-        mask = torch.zeros(batch_data.shape)
-    MSE_loss = torch.sum((~mask.bool() * batch_data - ~mask.bool() * output) ** 2)
-    if torch.sum(1 - mask) > 0:
-        MSE_loss /= torch.sum(1 - mask)
-    return MSE_loss
+def _masked_loss_func(output, masks, samples):
+    """ Computes the MSE loss.
+
+    :param output: tensor(Float); imputed samples
+    :param masks: tensor(Float); corresponding masks
+    :param samples: tensor(Float); original samples (with missing values)
+    :return: tensor(Float); loss obtained
+    """
+    if masks is None:
+        masks = torch.zeros(samples.shape)
+    mse_loss = torch.sum((~masks.bool() * samples - ~masks.bool() * output) ** 2)
+    if torch.sum(1 - masks) > 0:
+        mse_loss /= torch.sum(1 - masks)
+    return mse_loss
 
 
 class AimNet(nn.Module):
-    def __init__(self, k, n_cols, dropout_percent=0.0):
-        super(AimNet, self).__init__()
-        self.k = k
+    """ AimNet architecture as introduced in the AimNet paper (for numerical features only).
+
+    :param embedding_size: Integer: size of the embeddings
+    :param n_cols: Integer: number of features
+    :param dropout_percent: proportion of values to drop during training """
+    def __init__(self, embedding_size, n_cols, dropout_percent=0.0):
+        super().__init__()
         self.n_cols = n_cols
-        self.num_module_list = nn.ModuleList()
-        self.continuous_target_projection = nn.ModuleList()
-        self.Q_module = nn.ModuleList()
-        for i in range(n_cols):
-            seq_temp = nn.Sequential(nn.Linear(1, k),
-                                     nn.ReLU(),
-                                     nn.Linear(k, k)
-                                     )
-            self.num_module_list.append(seq_temp)
-        # print(self.num_module_list)
-
-        for i in range(n_cols):
-            self.Q_module.append(nn.Embedding(1, n_cols))
-
-        for i in range(n_cols):
-            self.continuous_target_projection.append(nn.Sequential(
-                nn.Linear(k, k), nn.ReLU(), nn.Linear(k, 1)))
+        self.num_module_list = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(1, embedding_size),
+                nn.ReLU(),
+                nn.Linear(embedding_size, embedding_size)
+            )
+            for _ in range(n_cols)
+        ])
+        self.q_module = nn.ModuleList([nn.Embedding(1, n_cols) for _ in range(n_cols)])
+        self.continuous_target_projection = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(embedding_size, embedding_size),
+                nn.ReLU(),
+                nn.Linear(embedding_size, 1)
+            )
+            for _ in range(n_cols)
+        ])
         self.dropout_layer = nn.Dropout(dropout_percent)
 
-    def forward(self, input_):
-        V_list = []
-        for i in range(self.n_cols):
-            V_list.append(self.num_module_list[i](input_[:, i].view(-1, 1)))
+    def forward(self, samples):
+        """ Forward function
 
-        V_list = torch.stack(V_list, dim=1)
-        V_list = self.dropout_layer(V_list)
-        V_list = nn.functional.normalize(V_list, dim=2, p=2)
-        Q_list = []
-        for i in range(self.n_cols):
-            temp_tensor = torch.tensor([0])
-            Q_list.append(self.Q_module[i](temp_tensor))
-        Q_list = torch.stack(Q_list, dim=0).squeeze()
+        :param samples: Tensor; samples with missing values
+        :return: Tensor; imputed samples
+        """
 
-        K = torch.eye(self.n_cols)
+        v_matrix = torch.stack([
+            layer(samples[:, i].view(-1, 1)) for i, layer in enumerate(self.num_module_list)], dim=1)
+        v_matrix = self.dropout_layer(v_matrix)
+        v_matrix = nn.functional.normalize(v_matrix, dim=2, p=2)
+        q_matrix = torch.stack([layer(torch.tensor([0])) for layer in self.q_module], dim=0).squeeze()
+
+        k_matrix = torch.eye(self.n_cols)
         preds = []
         for i in range(self.n_cols):
-            temp = torch.nn.Softmax(dim=0)(torch.matmul(K[i], Q_list))
+            weights = torch.nn.Softmax(dim=0)(torch.matmul(k_matrix[i], q_matrix))
             mask = torch.ones(self.n_cols)
             mask[i] = 0
-            temp = torch.mul(temp, mask)
+            weights = torch.mul(weights, mask)
 
-            context_vector = torch.matmul(temp, V_list)
+            context_vector = torch.matmul(weights, v_matrix)
             preds.append(self.continuous_target_projection[i](context_vector))
 
         return torch.cat(preds, dim=1)
 
 
 class Holoclean:
-    def __init__(self, input_, mask, args):
-        self.net = AimNet(args.holoclean_k, n_cols=input_.shape[1], dropout_percent=args.holoclean_dropout)
+    """ AimNet procedure as introduced in the AimNet paper (for numerical features only).
 
-    def train_generator(self, input_, mask, args):
+    :param samples: np.ndarray(Float); samples to use for initialisation
+    :param masks: np.ndarray(Float); corresponding mask matrix
+    :param args: ArgumentParser; arguments of the program
+    """
+    def __init__(self, samples, masks, args):
+        del masks
+        self.net = AimNet(args.holoclean_embedding_size, n_cols=samples.shape[1],
+                          dropout_percent=args.holoclean_dropout)
+
+    def train_generator(self, samples, masks, args):
+        """ Trains the network epoch after epoch as a generator.
+
+        :param samples: np.ndarray(Float); samples to use for training
+        :param masks: np.ndarray(Float); corresponding mask matrix
+        :param args: ArgumentParser; arguments of the program
+        :return: Integer; epoch number
+        """
         if args.batch_size == 0:
-            batch_size = 32 if len(input_) > 2000 else 1
+            batch_size = 32 if len(samples) > 2000 else 1
         elif args.batch_size == -1:
-            batch_size = len(input_)
+            batch_size = len(samples)
         else:
             batch_size = args.batch_size
 
@@ -85,7 +111,7 @@ class Holoclean:
 
         opt = torch.optim.Adam(self.net.parameters(), lr=args.lr)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(opt, 1, T_mult=1)
-        dl = torch.utils.data.DataLoader(dataset=list(zip(input_, mask)), batch_size=batch_size, shuffle=True)
+        dl = torch.utils.data.DataLoader(dataset=list(zip(samples, masks)), batch_size=batch_size, shuffle=True)
         iters = len(dl)
         step = 0
         yield step
@@ -93,15 +119,12 @@ class Holoclean:
 
         total_steps = max(args.metric_steps)
         for epoch in tqdm(range(total_steps)):
-            epoch_loss = 0
-            for j, (batch_missing_data, batch_mask) in enumerate(dl):
-                output = self.net(batch_missing_data)
+            for j, (batch_samples, batch_masks) in enumerate(dl):
+                output = self.net(batch_samples)
 
                 opt.zero_grad()
-
-                loss = masked_loss_func(output, batch_mask, batch_missing_data)
+                loss = _masked_loss_func(output, batch_masks, batch_samples)
                 loss.backward()
-                epoch_loss += loss.item()
                 opt.step()
 
                 scheduler.step(epoch + (j / iters))
@@ -109,7 +132,13 @@ class Holoclean:
             yield step
             self.net.train()
 
-    def test(self, input_, mask):
+    def test(self, samples, masks):
+        """ Imputes the given samples using the network.
+
+        :param samples: np.ndarray(Float); samples to impute
+        :param masks: np.ndarray(Float); corresponding mask matrix
+        :return: np.ndarray(Float); imputed samples
+        """
         self.net.eval()
-        imputed_data = self.net(torch.from_numpy(input_)).data.numpy()
-        return imputed_data * mask + input_ * (1-mask)
+        imputed_data = self.net(torch.from_numpy(samples)).data.numpy()
+        return imputed_data * masks + samples * (1-masks)

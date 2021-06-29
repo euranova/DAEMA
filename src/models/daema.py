@@ -1,4 +1,4 @@
-"""Model implementing the GAIN paper, with additional possibilities (e.g. MIDA as generator)."""
+""" Model implementing the DAEMA paper """
 
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -12,21 +12,29 @@ from models.baseline_imputations import MeanImputation
 
 
 class Generator(nn.Module):
+    """ Architecture of the DAEMA model
+
+    :param n_cols: Int; number of columns in the dataset
+    :param mask_input: Generator.FC, Generator.ELEMENTWISE or None; what input to use for the feature encoder
+        Generator.FC: Uses masks concatenated to the corresponding samples as input of the feature encoder
+        Generator.ELEMENTWISE: Uses masks to impute the samples with learned values
+        None: Uses only the samples as input of the feature encoder
+    :param feature_size: (Int or None, Int or None) or None; (d', d_z) from the paper ((ways, latent_dim))
+    :param attention_mode: "classic", "full", "sep" or "no"; type of attention to use
+        full: as done in the paper, one set of weights per feature
+        classic: one set of weights for all features
+        sep: same as classic, but having d' independent networks to produce each latent vector version
+        no: no attention at all (classical denoising autoencoder)
+    :param activation: Str or None; torch.nn activation function to use at the end of the network
+        (or None for no activation)
+    """
+
     ELEMENTWISE = 0
     FC = 1
     MODES = {FC: "_FC", ELEMENTWISE: "_EW", None: "_NO"}
 
     def __init__(self, n_cols, mask_input, feature_size, attention_mode, activation):
-        """ Architecture of the DAEMA model
-
-        :param n_cols: Int; number of columns in the dataset
-        :param mask_input: Generator.FC, Generator.ELEMENTWISE or None; what input to use for the feature encoder
-        :param feature_size: (Int or None, Int or None) or None; (d', d_z) from the paper ((ways, latent_dim))
-        :param attention_mode: "classic", "full", "sep" or "no"; type of attention to use
-        :param activation: Str or None; torch.nn activation function to use at the end of the network
-            (or None for no activation)
-        """
-        super(Generator, self).__init__()
+        super().__init__()
 
         assert attention_mode in ["classic", "full", "sep", "no"]
         if feature_size is None:
@@ -88,58 +96,63 @@ class Generator(nn.Module):
             *activation_tup
         )
 
-    def forward(self, data, mask):
-        """
+    def forward(self, samples, masks):
+        """ Forward function
 
-        :param data: Tensor; Data with missing values
-        :param mask: Tensor; Mask matrix
-        :return: (Tensor, Tensor); imputed inputs
+        :param samples: Tensor; samples with missing values
+        :param masks: Tensor; corresponding masks
+        :return: Tensor; imputed samples
         """
 
         # ELEMENTWISE allow the network to choose the value for "missing"
-        input_ = (data + self.pre_input * torch.repeat_interleave(mask, torch.tensor(self.input_sizes), dim=1)
-                  if self.mask_input == Generator.ELEMENTWISE else
-                  torch.cat((data, mask), dim=1) if self.mask_input == Generator.FC else
-                  data)
+        input_ = (samples + self.pre_input * masks if self.mask_input == Generator.ELEMENTWISE else
+                  torch.cat((samples, masks), dim=1) if self.mask_input == Generator.FC else
+                  samples)
 
         features = self.features(input_)
-        if self.attention_mode == 'no':
-            core = self.core(features)
-        else:
-            attention = self.attention(mask)
+        if self.attention_mode != "no":
+            attention = self.attention(masks)
             if self.attention_mode == 'full':
-                core = self.core((attention * features).sum(dim=1))
+                features = (attention * features).sum(dim=1)
             else:
-                core = self.core(attention.matmul(features).squeeze(dim=1))
+                features = attention.matmul(features).squeeze(dim=1)
+        core = self.core(features)
         output = self.output(core)
 
         return output
 
 
 class Daema:
-    def __init__(self, input_, mask, args):
+    """ DAEMA model as presented in the paper.
+
+    :param samples: np.ndarray(Float); samples to use for initialisation
+    :param masks: np.ndarray(Float); corresponding mask matrix
+    :param args: ArgumentParser; arguments of the program
+    """
+    def __init__(self, samples, masks, args):
+        del masks
         mask_input = getattr(Generator, args.daema_mask_input) if args.daema_mask_input is not None else None
         feature_size = (args.daema_ways, args.daema_feats)
-        self.net = Generator(input_.shape[1], mask_input, feature_size, args.daema_attention_mode,
+        self.net = Generator(samples.shape[1], mask_input, feature_size, args.daema_attention_mode,
                              args.daema_activation)
 
-    def train_generator(self, input_, mask, args, **kwargs):
-        """ Trains the networks epoch after epoch as a generator.
+    def train_generator(self, samples, masks, args, **kwargs):
+        """ Trains the network batch after batch as a generator.
 
-        :param input_: pd.DataFrame(Float); dataset to use for training
-        :param mask: pd.DataFrame(Float); corresponding mask matrix
+        :param samples: np.ndarray(Float); samples to use for training
+        :param masks: np.ndarray(Float); corresponding mask matrix
         :param args: ArgumentParser; arguments of the program
-        :param kwargs: Keyword args to be passed to torch.optim obj
+        :param kwargs: keyword arguments to be passed to the Adam optimiser
         :return: Integer; step number
         """
         self.net.train()
         mean_impute = None
         if args.daema_loss_type == "full":
-            mean_impute = MeanImputation(input_, mask, None)
-            mean_impute.train(input_, mask, None)
+            mean_impute = MeanImputation(samples, masks, None)
+            mean_impute.train(samples, masks, None)
 
         opt = torch.optim.Adam(self.net.parameters(), lr=args.lr, **kwargs)
-        dl = torch.utils.data.DataLoader(dataset=list(zip(input_, mask)), batch_size=args.batch_size, shuffle=True)
+        dl = torch.utils.data.DataLoader(dataset=list(zip(samples, masks)), batch_size=args.batch_size, shuffle=True)
 
         step = 0
         yield step
@@ -148,15 +161,15 @@ class Daema:
         total_steps = max(args.metric_steps)
         tqdm_iter = tqdm(range((total_steps // len(dl)) + 1))
         for _ in tqdm_iter:
-            for j, (input_, mask) in enumerate(dl):
-                keep = (np.random.uniform(0, 1, input_.shape) > args.daema_pre_drop)
-                new_mask = 1 - (1 - mask) * keep
-                output = self.net(input_ * keep, new_mask)
+            for batch_samples, batch_masks in dl:
+                keep = (np.random.uniform(0, 1, batch_samples.shape) > args.daema_pre_drop)
+                new_masks = 1 - (1 - batch_masks) * keep
+                output = self.net(batch_samples * keep, new_masks)
 
                 loss = (
-                    ((1 - mask) * ((output - input_) ** 2)) if args.daema_loss_type == "classic" else
-                    ((output - mean_impute.test(input_, mask)) ** 2) if args.daema_loss_type == "full" else
-                    ((1 - mask) * new_mask * ((output - input_) ** 2))
+                    (1 - batch_masks) * ((output - batch_samples) ** 2) if args.daema_loss_type == "classic" else
+                    (output - mean_impute.test(batch_samples, batch_masks)) ** 2 if args.daema_loss_type == "full" else
+                    (1 - batch_masks) * new_masks * ((output - batch_samples) ** 2)
                 ).sum(dim=0)
 
                 opt.zero_grad()
@@ -172,9 +185,16 @@ class Daema:
                 tqdm_iter.close()
                 break
 
-    def test(self, input_, mask):
+    def test(self, samples, masks):
+        """ Imputes the given samples using the network.
+
+        :param samples: np.ndarray(Float); samples to impute
+        :param masks: np.ndarray(Float); corresponding mask matrix
+        :return: np.ndarray(Float); imputed samples
+        """
+
         self.net.eval()
-        t_input_, t_mask = torch.from_numpy(input_), torch.from_numpy(mask)
-        t_output = self.net(t_input_, t_mask)
+        t_samples, t_masks = torch.from_numpy(samples), torch.from_numpy(masks)
+        t_output = self.net(t_samples, t_masks)
         output = t_output.data.numpy()
-        return output * mask + input_ * (1-mask)
+        return output * masks + samples * (1-masks)

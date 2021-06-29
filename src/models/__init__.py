@@ -1,4 +1,4 @@
-"""Contains all the models that can be used to impute missing datas."""
+""" Contains all the models that can be used to impute missing data. """
 
 from models.daema import Daema
 from models.holoclean import Holoclean
@@ -12,5 +12,5 @@ MODELS = {
     "MIDA": MIDA,
     "MissForest": MissForestImpute,
     "Mean": MeanImputation,
-    "Real": Identity,  # Can't be used as is for a RealImputation (see run.py code).
+    "Real": Identity,  # Not a proper imputation algorithm, handled separately in the run.py file
 }

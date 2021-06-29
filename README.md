@@ -1,18 +1,18 @@
-This repository contains the code for reproducibility of DAEMA: Denoising Autoencdoer with Mask Attention. 
+This repository contains the code used for the paper DAEMA: Denoising Autoencoder with Mask Attention. 
 
 
 # How to setup the environment
-## On Local Machine
-Create & activate the conda enviornment with python3.8.2 version
+## On a Local Machine
+Create and activate the conda environment with python 3.8.2
 ```
 conda create --name <env-name> python=3.8.2
 conda activate <env-name>
 ```
-Install the required libraries to run the code from requirements.txt
+Install the libraries listed in requirements.txt
 ```
 pip install -r requirements.txt
 ```
-Run code
+Run the code
 ```
 cd src
 python run.py
@@ -30,7 +30,7 @@ cd ..
 docker build -t missing_data_imputation:0.1 missing_data_imputation/Dockerfile .
 docker run -t -n mdi missing_data_imputation:0.1 python run.py
 ```
-# How to reproduce the results of the papaer
+# How to reproduce the results of the paper
 ## MCAR state-of-the-art comparison:
  * DAEMA: `python run.py`
  * DAE: `python run.py --daema_attention_mode no --daema_ways 1`
@@ -46,14 +46,13 @@ docker run -t -n mdi missing_data_imputation:0.1 python run.py
 ## Missingness proportions:
  * Same as above, but with an additional argument (e.g. for 10% missingness): `--ms_prop 0.1`
 
-## Ablation study part 1:
+## Ablation study part 1 (not part of the paper in the end):
  * Full: `python run.py`
  * Classic: `python run.py --daema_attention_mode classic`
  * Sep.: `python run.py --daema_attention_mode sep`
 
-## Ablation study part 2:
+## Ablation study part 2 (not part of the paper in the end):
  * DAEMA: `python run.py`
  * Reduced loss: `python run.py --daema_loss_type dropout_only`
  * Full loss: `python run.py --daema_loss_type full`
  * No art. miss.: `python run.py --daema_pre_drop 0`
-

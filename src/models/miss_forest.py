@@ -1,7 +1,6 @@
 """ MissForest model. The code for the MissForest comes mainly from missingpy:
 https://github.com/epsilon-machine/missingpy/tree/master/missingpy , with some adjustments to make it compatible
-with our pipeline."""
-
+with our pipeline. """
 
 import copy
 
@@ -14,23 +13,44 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 
 class MissForestImpute:
-    """MissForest model"""
+    """ MissForest procedure as introduced in the MissForest paper.
 
-    def __init__(self, input_, mask, args, **kwargs):
+    :param samples: np.ndarray(Float); samples to use for initialisation
+    :param masks: np.ndarray(Float); corresponding mask matrix
+    :param args: ArgumentParser; arguments of the program
+    :param kwargs: keyword arguments to be passed to the MissForest class
+    """
+
+    def __init__(self, samples, masks, args, **kwargs):
+        del samples, masks
         self.model = MissForest(n_estimators=args.mf_n_estimators, max_leaf_nodes=args.mf_max_leaf_nodes,
                                 max_iter=args.mf_max_iter, **kwargs)
         self.data = None
 
-    def train_generator(self, input_, mask, args):  # pylint:disable=no-self-use  # for pipeline compatibility
-        self.data = input_
-        self.data[mask.astype(bool)] = np.NaN
+    def train_generator(self, samples, masks, args):
+        """ Stores the training samples to use these when test samples are to be imputed.
+
+        :param samples: np.ndarray(Float); samples to use for training
+        :param masks: np.ndarray(Float); corresponding mask matrix
+        :param args: ArgumentParser; arguments of the program
+        :return: Integer; step number
+        """
+        del args
+        self.data = samples
+        self.data[masks.astype(bool)] = np.NaN
         yield 0
 
-    def test(self, input_, mask):
-        input_[mask.astype(bool)] = np.NaN
-        return self.model.fit_transform(self.data, X_test=input_, cat_vars=None)
+    def test(self, samples, masks):
+        """ Imputes the given samples using the network.
 
+        :param samples: np.ndarray(Float); samples to impute
+        :param masks: np.ndarray(Float); corresponding mask matrix
+        :return: np.ndarray(Float); imputed samples
+        """
+        samples[masks.astype(bool)] = np.NaN
+        return self.model.fit_transform(self.data, X_test=samples, cat_vars=None)
 
+# pylint: disable-all
 # The following code is copied and slightly modified from
 # https://github.com/epsilon-machine/missingpy/tree/master/missingpy
 
@@ -40,11 +60,14 @@ class MissForestImpute:
 
 
 def _get_mask(X, value_to_mask):
-    """Compute the boolean mask X == missing_values."""
+    """ Computes the mask matrix of X
+
+    :param X: np.ndarray(Float); samples
+    :param value_to_mask: Any; value to be treated as missing value ("NaN" means np.NaN)
+    :return: mask matrix corresponding to the samples of X"""
     if value_to_mask == "NaN" or np.isnan(value_to_mask):
         return np.isnan(X)
-    else:
-        return X == value_to_mask
+    return X == value_to_mask
 
 
 class MissForest:
@@ -454,7 +477,8 @@ class MissForest:
                 gamma_newcat = np.sum(
                     (Ximp[:, self.cat_vars_] != Ximp_old[:, self.cat_vars_])) / n_catmissing
             if self.num_vars_ is not None:
-                gamma_new = np.sum((Ximp[:, self.num_vars_] - Ximp_old[:, self.num_vars_]) ** 2) / np.sum((Ximp[:, self.num_vars_]) ** 2)
+                gamma_new = (np.sum((Ximp[:, self.num_vars_] - Ximp_old[:, self.num_vars_]) ** 2)
+                             / np.sum((Ximp[:, self.num_vars_]) ** 2))
 
             print("Iteration:", self.iter_count_)
             self.iter_count_ += 1

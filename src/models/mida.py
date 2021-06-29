@@ -1,4 +1,4 @@
-"""Model implementing the MIDA paper, with some additional possibilities."""
+""" Model implementing the MIDA paper, with some additional possibilities. """
 
 import logging
 
@@ -11,15 +11,25 @@ from tqdm import tqdm
 from models.baseline_imputations import MeanImputation
 
 
-def init_weights(m):
-    if type(m) == nn.Linear:
-        torch.nn.init.xavier_uniform(m.weight)
-        m.bias.data.fill_(0.01)
+def _init_weights(layer):
+    """Initialises the weights of the layer.
+
+    :param layer: nn.Module; layer to initialise the weights for
+    """
+    if isinstance(layer, nn.Linear):
+        torch.nn.init.xavier_uniform(layer.weight)
+        layer.bias.data.fill_(0.01)
 
 
 class DAE(nn.Module):
+    """ MIDA architecture as introduced in the MIDA paper.
+
+    :param n_cols: Integer: number of features
+    :param theta: Integer: hyperparameter to control the width of the network (see paper)
+    :param depth: Integer: hyperparameter to control the depth of the network (see paper)
+    """
     def __init__(self, n_cols, theta=7, depth=3):
-        super(DAE, self).__init__()
+        super().__init__()
 
         encoder_modules = []
         decoder_modules = []
@@ -35,77 +45,82 @@ class DAE(nn.Module):
         self.decoder = nn.Sequential(*decoder_modules)
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, input_):
-        input_ = self.dropout(input_)
-        input_ = self.encoder(input_)
-        input_ = self.decoder(input_)
-        return input_
+    def forward(self, samples):
+        """ Forward function
+
+        :param samples: Tensor; samples with missing values
+        :return: Tensor; imputed samples
+        """
+        samples = self.dropout(samples)
+        samples = self.encoder(samples)
+        samples = self.decoder(samples)
+        return samples
 
 
 class MIDA:
-    def __init__(self, input_, mask, args):
-        """Initialises the model.
+    """ MIDA procedure as introduced in the MIDA paper.
 
-        :param input_: pd.DataFrame(Float); dataset to use for initialising
-        :param mask: pd.DataFrame(Float); corresponding mask matrix
+    :param samples: np.ndarray(Float); samples to use for initialisation
+    :param masks: np.ndarray(Float); corresponding mask matrix
+    :param args: ArgumentParser; arguments of the program
+    """
+
+    def __init__(self, samples, masks, args):
+        del masks
+        self.net = DAE(samples.shape[1], theta=args.mida_theta, depth=args.mida_depth)
+        self.net.apply(_init_weights)
+
+    def train_generator(self, samples, masks, args, **kwargs):
+        """ Trains the network batch after batch as a generator.
+
+        :param samples: np.ndarray(Float); samples to use for training
+        :param masks: np.ndarray(Float); corresponding mask matrix
         :param args: ArgumentParser; arguments of the program
+        :param kwargs: keyword arguments to be passed to the Adam optimiser
+        :return: Integer; step number
         """
-        self.net = DAE(input_.shape[1], theta=args.mida_theta, depth=args.mida_depth)
-        self.net.apply(init_weights)
-
-    def train_generator(self, input_, mask, args, **kwargs):
-        """Trains the Mida model.
-
-        :param dataset: see pipeline_blocks.models.Model.train
-        :param total_steps: Int; number of steps
-        :param kwargs: arguments to be passed to the optimiser at initialisation (in addition to learning_rate)
-        """
-        batch_size = input_.shape[0] if args.batch_size == -1 else args.batch_size
-        mean_impute = MeanImputation(input_, mask, None)
-        mean_impute.train(input_, mask, None)
+        batch_size = samples.shape[0] if args.batch_size == -1 else args.batch_size
+        mean_impute = MeanImputation(samples, masks, None)
+        mean_impute.train(samples, masks, None)
         self.net.train()
 
         optimizer = torch.optim.Adam(self.net.parameters(), lr=args.lr, **kwargs)
         criterion = nn.MSELoss()
-        epoch_losses=[]
-        train_loader = torch.utils.data.DataLoader(dataset=list(zip(input_, mask)), batch_size=batch_size, shuffle=True)
-        iters = len(train_loader)
-        i = epoch_loss = 0
+        train_loader = torch.utils.data.DataLoader(
+            dataset=list(zip(samples, masks)), batch_size=batch_size, shuffle=True)
         step = 0
         yield step
         self.net.train()
         total_steps = max(args.metric_steps)
-        tqdm_ite = tqdm(range((total_steps // iters) + 1))
-        early_stop = False
-        for i in tqdm_ite:
-            epoch_loss = 0
-            for input_, mask in train_loader:
-                input_ = mean_impute.test(input_, mask)
-                reconst_data = self.net(input_)
-                loss = criterion(reconst_data, input_)
+        tqdm_ite = tqdm(range((total_steps // len(train_loader)) + 1))
+        for _ in tqdm_ite:
+            for batch_samples, batch_masks in train_loader:
+                batch_samples = mean_impute.test(batch_samples, batch_masks)
+                output = self.net(batch_samples)
+                loss = criterion(output, batch_samples)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
-                epoch_loss += loss.item()
                 step += 1
                 yield step
                 self.net.train()
-                if step >= total_steps or early_stop:
+                if step >= total_steps:
                     break
-            if step >= total_steps or early_stop:
+            if step >= total_steps:
                 tqdm_ite.close()
                 break
-            epoch_losses.append(epoch_loss)
-            if i % max(step // 10, 1) == 0:
-                logging.debug("epoch %d: MIDA loss: %f", i + 1, epoch_loss)
-        logging.info("epoch %d: MIDA loss: %f", i + 1, epoch_loss)
 
-    def test(self, input_, mask):
+    def test(self, samples, masks):
+        """ Imputes the given samples using the network.
+
+        :param samples: np.ndarray(Float); samples to impute
+        :param masks: np.ndarray(Float); corresponding mask matrix
+        :return: np.ndarray(Float); imputed samples
+        """
         self.net.eval()
-        replace_missing = np.random.uniform(0, 0.01, input_.shape).astype(np.float32)
-        input_ = torch.from_numpy(input_ * (1 - mask) + mask * replace_missing)
-        mask = torch.from_numpy(mask)
-        imputed_data = self.net(input_)
-        imputed_data = input_ * (1 - mask) + mask * imputed_data
-        return imputed_data.data.numpy()
+        replace_missing = np.random.uniform(0, 0.01, samples.shape).astype(np.float32)
+        samples = torch.from_numpy(samples * (1 - masks) + masks * replace_missing)
+        masks = torch.from_numpy(masks)
+        imputed_samples = self.net(samples)
+        imputed_samples = samples * (1 - masks) + masks * imputed_samples
+        return imputed_samples.data.numpy()
