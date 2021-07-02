@@ -1,7 +1,5 @@
 """ Model implementing the MIDA paper, with some additional possibilities. """
 
-import logging
-
 import torch
 import torch.utils.data
 import torch.nn as nn
@@ -22,7 +20,7 @@ def _init_weights(layer):
 
 
 class DAE(nn.Module):
-    """ MIDA architecture as introduced in the MIDA paper.
+    """ DAE architecture used in the MIDA paper.
 
     :param n_cols: Integer: number of features
     :param theta: Integer: hyperparameter to control the width of the network (see paper)

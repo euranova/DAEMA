@@ -1,33 +1,24 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
-  <meta charset="utf-8" />
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>models package &mdash; DAEMA 1.0.0 documentation</title>
   
 
   
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-
+  
   
   
 
   
-  
-
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -39,6 +30,12 @@
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
     
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
 </head>
@@ -77,7 +74,6 @@
           
         </div>
 
-        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -102,7 +98,6 @@
             
           
         </div>
-        
       </div>
     </nav>
 
@@ -137,20 +132,18 @@
 
 
 
-
-
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><a href="index.html">Docs</a> &raquo;</li>
         
       <li>models package</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="_sources/models.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -164,12 +157,12 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="models-package">
+  <section id="models-package">
 <h1>models package<a class="headerlink" href="#models-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="submodules">
+<section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-models.baseline_imputations">
+</section>
+<section id="module-models.baseline_imputations">
 <span id="models-baseline-imputations-module"></span><h2>models.baseline_imputations module<a class="headerlink" href="#module-models.baseline_imputations" title="Permalink to this headline">¶</a></h2>
 <p>Basic imputation techniques.</p>
 <dl class="py class">
@@ -223,8 +216,8 @@
 
 </dd></dl>
 
-</div>
-<div class="section" id="module-models.daema">
+</section>
+<section id="module-models.daema">
 <span id="models-daema-module"></span><h2>models.daema module<a class="headerlink" href="#module-models.daema" title="Permalink to this headline">¶</a></h2>
 <p>Model implementing the DAEMA paper</p>
 <dl class="py class">
@@ -289,15 +282,15 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_cols</strong> – Int; number of columns in the dataset</p></li>
 <li><p><strong>mask_input</strong> – Generator.FC, Generator.ELEMENTWISE or None; what input to use for the feature encoder
-Generator.FC: Uses masks concatenated to the corresponding samples as input of the feature encoder
-Generator.ELEMENTWISE: Uses masks to impute the samples with learned values
-None: Uses only the samples as input of the feature encoder</p></li>
-<li><p><strong>feature_size</strong> – (Int or None, Int or None) or None; (d’, d_z) from the paper ((ways, latent_dim))</p></li>
+- Generator.FC: Uses masks concatenated to the corresponding samples as input of the feature encoder
+- Generator.ELEMENTWISE: Uses masks to impute the samples with learned values
+- None: Uses only the samples as input of the feature encoder</p></li>
+<li><p><strong>feature_size</strong> – (Int or None, Int or None) or None; (dù’, d_z) from the paper ((ways, latent_dim))</p></li>
 <li><p><strong>attention_mode</strong> – “classic”, “full”, “sep” or “no”; type of attention to use
-full: as done in the paper, one set of weights per feature
-classic: one set of weights for all features
-sep: same as classic, but having d’ independent networks to produce each latent vector version
-no: no attention at all (classical denoising autoencoder)</p></li>
+- full: as done in the paper, one set of weights per feature
+- classic: one set of weights for all features
+- sep: same as classic, but having d’ independent networks to produce each latent vector version
+- no: no attention at all (classical denoising autoencoder)</p></li>
 <li><p><strong>activation</strong> – Str or None; torch.nn activation function to use at the end of the network
 (or None for no activation)</p></li>
 </ul>
@@ -335,15 +328,10 @@ no: no attention at all (classical denoising autoencoder)</p></li>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="models.daema.Generator.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#models.daema.Generator.training" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 </dd></dl>
 
-</div>
-<div class="section" id="module-models.holoclean">
+</section>
+<section id="module-models.holoclean">
 <span id="models-holoclean-module"></span><h2>models.holoclean module<a class="headerlink" href="#module-models.holoclean" title="Permalink to this headline">¶</a></h2>
 <p>Contains the implementation of AimNet, from Holoclean.</p>
 <dl class="py class">
@@ -373,11 +361,6 @@ no: no attention at all (classical denoising autoencoder)</p></li>
 </dd>
 </dl>
 </dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="models.holoclean.AimNet.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#models.holoclean.AimNet.training" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </dd></dl>
 
@@ -432,15 +415,15 @@ no: no attention at all (classical denoising autoencoder)</p></li>
 
 </dd></dl>
 
-</div>
-<div class="section" id="module-models.mida">
+</section>
+<section id="module-models.mida">
 <span id="models-mida-module"></span><h2>models.mida module<a class="headerlink" href="#module-models.mida" title="Permalink to this headline">¶</a></h2>
 <p>Model implementing the MIDA paper, with some additional possibilities.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="models.mida.DAE">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">models.mida.</span></span><span class="sig-name descname"><span class="pre">DAE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#models.mida.DAE" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
-<p>MIDA architecture as introduced in the MIDA paper.</p>
+<p>DAE architecture used in the MIDA paper.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -463,11 +446,6 @@ no: no attention at all (classical denoising autoencoder)</p></li>
 </dd>
 </dl>
 </dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="models.mida.DAE.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#models.mida.DAE.training" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </dd></dl>
 
@@ -523,8 +501,8 @@ no: no attention at all (classical denoising autoencoder)</p></li>
 
 </dd></dl>
 
-</div>
-<div class="section" id="module-models.miss_forest">
+</section>
+<section id="module-models.miss_forest">
 <span id="models-miss-forest-module"></span><h2>models.miss_forest module<a class="headerlink" href="#module-models.miss_forest" title="Permalink to this headline">¶</a></h2>
 <p>MissForest model. The code for the MissForest comes mainly from missingpy:
 <a class="reference external" href="https://github.com/epsilon-machine/missingpy/tree/master/missingpy">https://github.com/epsilon-machine/missingpy/tree/master/missingpy</a> , with some adjustments to make it compatible
@@ -830,37 +808,32 @@ variable(s)/feature(s) present in the dataset X.
 
 </dd></dl>
 
-</div>
-<div class="section" id="module-models">
+</section>
+<section id="module-models">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-models" title="Permalink to this headline">¶</a></h2>
 <p>Contains all the models that can be used to impute missing data.</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
            
           </div>
           <footer>
+  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        &#169; Copyright 2021, Simon Tihon, Muhammad Usama Javaid, Damien Fourure, Nicolas Posocco, Thomas Peel.
+        &copy; Copyright 2021, Simon Tihon, Muhammad Usama Javaid, Damien Fourure, Nicolas Posocco, Thomas Peel
 
     </p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
+
         </div>
       </div>
 
@@ -868,6 +841,7 @@ variable(s)/feature(s) present in the dataset X.
 
   </div>
   
+
 
   <script type="text/javascript">
       jQuery(function () {

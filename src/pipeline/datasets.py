@@ -1,12 +1,7 @@
 """ Contains all the dataset creation and preprocessing parts. """
 
-import operator
 import os
-import time
-import traceback
 import urllib.request
-import zipfile
-import io
 
 import sklearn.datasets
 import pandas as pd
@@ -74,10 +69,11 @@ def _create_mask(samples, setting="mcar", method="uniform", thresh=0.2):
     v = np.random.uniform(size=(rows, cols))
     mask = v <= thresh  # mcar uniform mask, subsequently modified for the other settings
 
+    # It could be all inside the if clause, but it would not reproduce the paper results as faithfully
+    c = np.zeros(cols, dtype=bool)
+    missing_cols = np.random.choice(cols, cols // 2, replace=False)
+    c[missing_cols] = True
     if method == 'random':
-        c = np.zeros(cols, dtype=bool)
-        missing_cols = np.random.choice(cols, cols // 2, replace=False)
-        c[missing_cols] = True
         mask *= c
 
     if setting == "mnar":
@@ -182,7 +178,8 @@ def get_dataset(name, scaler="Standard", ms_prop=0.2, ms_setting='mcar', ms_meth
     perm = np.random.permutation(np.sum(train_ids))
     df[train_ids] = df[train_ids].iloc[perm, :].values
     target[train_ids] = target[train_ids][perm]
-    mask[train_ids] = mask[train_ids][perm]
+    if ms_setting == "mnar":  # It could be done for mcar, but it would not reproduce the paper results as faithfully
+        mask[train_ids] = mask[train_ids][perm]
 
     df = _normalise(df.copy(), mask, train_ids, scaler=scaler)
     train_set = tuple((val[train_ids].astype(np.float32) for val in [df, mask, target]))

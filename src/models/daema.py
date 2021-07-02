@@ -16,15 +16,15 @@ class Generator(nn.Module):
 
     :param n_cols: Int; number of columns in the dataset
     :param mask_input: Generator.FC, Generator.ELEMENTWISE or None; what input to use for the feature encoder
-        Generator.FC: Uses masks concatenated to the corresponding samples as input of the feature encoder
-        Generator.ELEMENTWISE: Uses masks to impute the samples with learned values
-        None: Uses only the samples as input of the feature encoder
+        - Generator.FC: Uses masks concatenated to the corresponding samples as input of the feature encoder
+        - Generator.ELEMENTWISE: Uses masks to impute the samples with learned values
+        - None: Uses only the samples as input of the feature encoder
     :param feature_size: (Int or None, Int or None) or None; (d', d_z) from the paper ((ways, latent_dim))
     :param attention_mode: "classic", "full", "sep" or "no"; type of attention to use
-        full: as done in the paper, one set of weights per feature
-        classic: one set of weights for all features
-        sep: same as classic, but having d' independent networks to produce each latent vector version
-        no: no attention at all (classical denoising autoencoder)
+        - full: as done in the paper, one set of weights per feature
+        - classic: one set of weights for all features
+        - sep: same as classic, but having d' independent networks to produce each latent vector version
+        - no: no attention at all (classical denoising autoencoder)
     :param activation: Str or None; torch.nn activation function to use at the end of the network
         (or None for no activation)
     """
@@ -89,8 +89,6 @@ class Generator(nn.Module):
                 nn.Softmax(dim=1)
             )
 
-        self.core = nn.Sequential()
-
         self.output = nn.Sequential(
             nn.Linear(feature_size[-1], n_cols),
             *activation_tup
@@ -116,8 +114,7 @@ class Generator(nn.Module):
                 features = (attention * features).sum(dim=1)
             else:
                 features = attention.matmul(features).squeeze(dim=1)
-        core = self.core(features)
-        output = self.output(core)
+        output = self.output(features)
 
         return output
 

@@ -1,12 +1,9 @@
 """ Contains the implementation of AimNet, from Holoclean."""
 
-import logging
-
 import torch
 import torch.utils.data
 import torch.nn as nn
 from tqdm import tqdm
-import numpy as np
 
 
 def _masked_loss_func(output, masks, samples):

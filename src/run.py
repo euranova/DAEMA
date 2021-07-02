@@ -1,5 +1,7 @@
 """ Entry point to run the experiments """
 
+import os
+
 import numpy as np
 import torch
 

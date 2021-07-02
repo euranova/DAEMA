@@ -5,7 +5,6 @@ with our pipeline. """
 import copy
 
 import numpy as np
-import pandas as pd
 import warnings
 from scipy.stats import mode
 from sklearn.utils.validation import check_is_fitted, check_array
