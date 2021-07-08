@@ -1,0 +1,53 @@
+models package
+==============
+
+Submodules
+----------
+
+models.baseline\_imputations module
+-----------------------------------
+
+.. automodule:: models.baseline_imputations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+models.daema module
+-------------------
+
+.. automodule:: models.daema
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+models.holoclean module
+-----------------------
+
+.. automodule:: models.holoclean
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+models.mida module
+------------------
+
+.. automodule:: models.mida
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+models.miss\_forest module
+--------------------------
+
+.. automodule:: models.miss_forest
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: models
+   :members:
+   :undoc-members:
+   :show-inheritance:

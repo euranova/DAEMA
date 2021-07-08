@@ -1,0 +1,45 @@
+pipeline package
+================
+
+Submodules
+----------
+
+pipeline.argument\_parser module
+--------------------------------
+
+.. automodule:: pipeline.argument_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pipeline.datasets module
+------------------------
+
+.. automodule:: pipeline.datasets
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pipeline.metrics module
+-----------------------
+
+.. automodule:: pipeline.metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pipeline.utils module
+---------------------
+
+.. automodule:: pipeline.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: pipeline
+   :members:
+   :undoc-members:
+   :show-inheritance:
