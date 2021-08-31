@@ -6,7 +6,7 @@ import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 
-from models.baseline_imputations import MeanImputation
+from .baseline_imputations import MeanImputation
 
 
 def _init_weights(layer):
@@ -15,7 +15,7 @@ def _init_weights(layer):
     :param layer: nn.Module; layer to initialise the weights for
     """
     if isinstance(layer, nn.Linear):
-        torch.nn.init.xavier_uniform(layer.weight)
+        torch.nn.init.xavier_uniform_(layer.weight)
         layer.bias.data.fill_(0.01)
 
 
@@ -60,11 +60,11 @@ class MIDA:
 
     :param samples: np.ndarray(Float); samples to use for initialisation
     :param masks: np.ndarray(Float); corresponding mask matrix
-    :param args: ArgumentParser; arguments of the program
+    :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
     """
 
     def __init__(self, samples, masks, args):
-        del masks
+        del masks  # Unused
         self.net = DAE(samples.shape[1], theta=args.mida_theta, depth=args.mida_depth)
         self.net.apply(_init_weights)
 
@@ -73,7 +73,7 @@ class MIDA:
 
         :param samples: np.ndarray(Float); samples to use for training
         :param masks: np.ndarray(Float); corresponding mask matrix
-        :param args: ArgumentParser; arguments of the program
+        :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
         :param kwargs: keyword arguments to be passed to the Adam optimiser
         :return: Integer; step number
         """

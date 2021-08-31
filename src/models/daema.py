@@ -1,14 +1,51 @@
 """ Model implementing the DAEMA paper """
 
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.utils.data
 import numpy as np
 
-from pipeline import utils
-from models.baseline_imputations import MeanImputation
+from .baseline_imputations import MeanImputation
+
+
+class ParallelLinear(nn.Module):
+    """ Layer composed of parallel fully-connected layers.
+
+    :param in_channels: Integer; number of input of each layer
+    :param out_channels: Integer; number of output of each layer
+    :param n_layers: Integer; number of parallel layers
+    """
+    def __init__(self, in_channels, out_channels, n_layers):
+        super().__init__()
+        self.dims = ((n_layers, in_channels), (n_layers, out_channels))
+        self.layers = nn.ModuleList([
+            nn.Linear(in_channels, out_channels) for _ in range(n_layers)
+        ])
+
+    def __repr__(self):
+        return f'<ParallelLinear{self.dims}>'
+
+    def forward(self, input_):
+        # .T[:, i].T takes the dim just before the last one (no matter how many dimensions there are)
+        out = [self.layers[i](input_.T[:, i].T) for i in range(self.dims[0][0])]
+        return torch.stack(out, dim=len(input_.shape) - 2)
+
+
+class View(nn.Module):
+    """ Layer to reshape the data (keeping the first (batch) dimension as is).
+
+    :param shape: tuple(Integer); expected shape (batch_dimension excluded)
+    """
+    def __init__(self, shape):
+        super().__init__()
+        self.shape = shape
+
+    def __repr__(self):
+        return f'<View{self.shape}>'
+
+    def forward(self, input_):
+        return input_.view((input_.shape[0], *self.shape))
 
 
 class Generator(nn.Module):
@@ -68,24 +105,24 @@ class Generator(nn.Module):
             self.features = nn.Sequential(
                 nn.Linear(encoder_in_dim, np.prod(feature_size)),
                 nn.Tanh(),
-                utils.View(feature_size),
-                utils.ParallelLinear(feature_size[1], feature_size[1], n_layers=feature_size[0]),
+                View(feature_size),
+                ParallelLinear(feature_size[1], feature_size[1], n_layers=feature_size[0]),
                 nn.Tanh()
             ) if attention_mode == 'sep' else nn.Sequential(
                 nn.Linear(encoder_in_dim, np.prod(feature_size)),
                 nn.Tanh(),
                 nn.Linear(np.prod(feature_size), np.prod(feature_size)),
                 nn.Tanh(),
-                utils.View(feature_size)
+                View(feature_size)
             )
 
             self.attention = nn.Sequential(
                 nn.Linear(n_cols, feature_size[0]),
                 nn.Softmax(dim=1),
-                utils.View((1, feature_size[0]))
+                View((1, feature_size[0]))
             ) if attention_mode != 'full' else nn.Sequential(
                 nn.Linear(n_cols, np.prod(feature_size)),
-                utils.View(feature_size),
+                View(feature_size),
                 nn.Softmax(dim=1)
             )
 
@@ -124,10 +161,10 @@ class Daema:
 
     :param samples: np.ndarray(Float); samples to use for initialisation
     :param masks: np.ndarray(Float); corresponding mask matrix
-    :param args: ArgumentParser; arguments of the program
+    :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
     """
     def __init__(self, samples, masks, args):
-        del masks
+        del masks  # Unused
         mask_input = getattr(Generator, args.daema_mask_input) if args.daema_mask_input is not None else None
         feature_size = (args.daema_ways, args.daema_feats)
         self.net = Generator(samples.shape[1], mask_input, feature_size, args.daema_attention_mode,
@@ -138,7 +175,7 @@ class Daema:
 
         :param samples: np.ndarray(Float); samples to use for training
         :param masks: np.ndarray(Float); corresponding mask matrix
-        :param args: ArgumentParser; arguments of the program
+        :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
         :param kwargs: keyword arguments to be passed to the Adam optimiser
         :return: Integer; step number
         """

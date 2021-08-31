@@ -16,12 +16,12 @@ class MissForestImpute:
 
     :param samples: np.ndarray(Float); samples to use for initialisation
     :param masks: np.ndarray(Float); corresponding mask matrix
-    :param args: ArgumentParser; arguments of the program
+    :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
     :param kwargs: keyword arguments to be passed to the MissForest class
     """
 
     def __init__(self, samples, masks, args, **kwargs):
-        del samples, masks
+        del samples, masks  # Unused
         self.model = MissForest(n_estimators=args.mf_n_estimators, max_leaf_nodes=args.mf_max_leaf_nodes,
                                 max_iter=args.mf_max_iter, **kwargs)
         self.data = None
@@ -31,10 +31,10 @@ class MissForestImpute:
 
         :param samples: np.ndarray(Float); samples to use for training
         :param masks: np.ndarray(Float); corresponding mask matrix
-        :param args: ArgumentParser; arguments of the program
+        :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
         :return: Integer; step number
         """
-        del args
+        del args  # Unused
         self.data = samples
         self.data[masks.astype(bool)] = np.NaN
         yield 0

@@ -82,10 +82,10 @@ class Holoclean:
 
     :param samples: np.ndarray(Float); samples to use for initialisation
     :param masks: np.ndarray(Float); corresponding mask matrix
-    :param args: ArgumentParser; arguments of the program
+    :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
     """
     def __init__(self, samples, masks, args):
-        del masks
+        del masks  # Unused
         self.net = AimNet(args.holoclean_embedding_size, n_cols=samples.shape[1],
                           dropout_percent=args.holoclean_dropout)
 
@@ -94,7 +94,7 @@ class Holoclean:
 
         :param samples: np.ndarray(Float); samples to use for training
         :param masks: np.ndarray(Float); corresponding mask matrix
-        :param args: ArgumentParser; arguments of the program
+        :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
         :return: Integer; epoch number
         """
         if args.batch_size == 0:

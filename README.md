@@ -34,16 +34,21 @@ python run.py
 ### With Docker
 The repo also contains Dockerfile to run the code
 ```
-cd ..
-docker build -t <image_name>:<tag> missing_data_imputation/Dockerfile .
-docker run -t -n <container-name> <image_name> <experiment-to-run>
+docker build -t <image_name>:<tag> .
+docker run -t --name <container-name> <image_name> <experiment-to-run>
 ```
 Example:
 ```
-cd ..
-docker build -t missing_data_imputation:0.1 missing_data_imputation/Dockerfile .
-docker run -t -n mdi missing_data_imputation:0.1 python run.py
+docker build -t daema:latest .
+docker run -t --name daema_container daema:latest python run.py
 ```
+
+### Test your installation
+You can test your installation by running
+```bash
+PYTHONPATH=src/ pytest tests
+```
+
 ## How to reproduce the results of the paper
 ### MCAR state-of-the-art comparison:
  * DAEMA: `python run.py`
@@ -70,3 +75,18 @@ docker run -t -n mdi missing_data_imputation:0.1 python run.py
  * Reduced loss: `python run.py --daema_loss_type dropout_only`
  * Full loss: `python run.py --daema_loss_type full`
  * No art. miss.: `python run.py --daema_pre_drop 0`
+
+## How to add a dataset
+To test the code on a local dataset:
+ * put the dataset in `files/data/<name>.csv`;
+ * update the `src/pipeline/datasets/DATASETS` variable to add your dataset;
+ * run the tests;
+ * use the --datasets argument to select it for the experiments (e.g. `python run.py --datasets <name>`).
+
+## How to add a model
+To test the code on a custom model:
+ * implement the model following the expected interface
+ (see `src/models/baseline_imputations/Identity` for the basic structure);
+ * update the `src/models/__init__/MODELS` variable to add your model;
+ * run the tests;
+ * use the --model argument to select it for the experiments (e.g. `python run.py --model <Name>`).

@@ -9,7 +9,6 @@ import numpy as np
 import unlzw3
 from sklearn import preprocessing
 from sklearn.preprocessing import OrdinalEncoder
-from torch.utils.data import DataLoader
 
 import pipeline.utils as U
 
@@ -40,9 +39,8 @@ def _download_dataset(access, path_to):
             df["target"] = pd.DataFrame(ds.target)
             string_ds += bytes(df.to_csv(index=False), encoding='utf-8')
         elif type_ in ["csv", "z"]:
-            u = urllib.request.urlopen(link)
-            string_ds += u.read() if type_ == "csv" else unlzw3.unlzw(u.read())
-            u.close()
+            with urllib.request.urlopen(link) as u:
+                string_ds += u.read() if type_ == "csv" else unlzw3.unlzw(u.read())
         else:
             raise NotImplementedError(
                 f"Unknown type entered: {type_}. Please use only 'csv', 'sklearn' or 'zip'.")
@@ -108,7 +106,7 @@ def _normalise(samples, mask, train_ids, scaler='Standard'):
 
 
 DATASETS = {
-    # "Name": {"access": <see _download_dataset documentation>,
+    # "Name": {"access": <see _download_dataset documentation>, or None if it is a local file that cannot be downloaded,
     # "target": <target-column number or name>, "task": <"classification" or "regression">,
     # "csv_params: <dict with the params to be given to the pd.read_csv function>}
 
@@ -162,6 +160,8 @@ def get_dataset(name, scaler="Standard", ms_prop=0.2, ms_setting='mcar', ms_meth
     U.fix_seed(seed)
     path = os.path.join(U.DATA_PATH, f"{name}.csv")
     if not os.path.exists(path):
+        if DATASETS[name].get("access", None) is None:
+            raise RuntimeError(f"The {name} dataset is neither downloadable or in the {path} file")
         _download_dataset(DATASETS[name]["access"], path_to=path)
 
     df = pd.read_csv(path, **DATASETS[name]["csv_params"])
@@ -186,26 +186,3 @@ def get_dataset(name, scaler="Standard", ms_prop=0.2, ms_setting='mcar', ms_meth
     test_set = tuple((val[~train_ids].astype(np.float32) for val in [df, mask, target]))
 
     return train_set, test_set, DATASETS[name]["task"] == "classification"
-
-
-def test():
-    for ds_name in DATASETS:
-        train_set, test_set, _ = get_dataset(ds_name, seed=42)
-
-        dl = DataLoader(list(zip(*train_set)), batch_size=5)
-        for i, (data, missing_data, mask) in enumerate(dl):
-            print(data, missing_data, mask, sep="\n")
-            if i == 1:
-                break
-        dl = DataLoader(list(zip(*test_set)), batch_size=5)
-        for i, (data, missing_data, mask) in enumerate(dl):
-            print(data, missing_data, mask, sep="\n")
-            if i == 1:
-                break
-
-        print(test_set[2][:5])
-        print(train_set[2][:5])
-
-
-if __name__ == "__main__":
-    test()

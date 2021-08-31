@@ -2,16 +2,21 @@
 
 import argparse
 
+from models import MODELS
+from pipeline.datasets import DATASETS
 
-def get_args():
+
+def get_args(args):
     """ Creates the parser and returns it.
 
-    :return: ArgumentParser; arguments of the program"""
+    :param args: List[String]; args to parse
+    :return: ArgumentParser; arguments of the program
+    """
     parser = argparse.ArgumentParser(description='Runs the experiments described in the DAEMA paper.')
 
     ds_settings = parser.add_argument_group('Dataset settings')
-    datasets = ["EEG", "Glass", "Breast", "Ionosphere", "Shuttle", "Boston", "CASP"]
-    ds_settings.add_argument('--datasets', choices=datasets, nargs='+', default=datasets, help="Datasets to use")
+    ds_settings.add_argument('--datasets', choices=list(DATASETS), nargs='+', default=list(DATASETS),
+                             help="Datasets to use")
     ds_settings.add_argument('--dataset_seeds', nargs='*', type=int, default=[],
                              help="Seeds to use to produce the datasets. Leave it empty to use the same as "
                                   "for the model. Else, runs as many experiments as entered seeds.")
@@ -30,7 +35,7 @@ def get_args():
     common_model_settings.add_argument('--seeds', nargs='+', type=int, default=list(range(10)),
                                        help="Seeds to use to initialise and train the model. "
                                             "Runs as many experiments as entered seeds.")
-    common_model_settings.add_argument('--model', choices=["DAEMA", "Holoclean", "MIDA", "MissForest", "Mean", "Real"],
+    common_model_settings.add_argument('--model', choices=list(MODELS),
                                        default="DAEMA", help="Model to use")
     common_model_settings.add_argument('--metric_steps', type=int, nargs='+',
                                        default=[39200, 39400, 39600, 39800, 40000],
@@ -79,4 +84,4 @@ def get_args():
     metric_settings = parser.add_argument_group("Metric settings")
     metric_settings.add_argument('--metrics', nargs='+', choices=["NRMS", "RF"], default=["NRMS", "RF"],
                                  help="Metrics to use")
-    return parser.parse_args()
+    return parser.parse_args(args)

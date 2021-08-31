@@ -1,6 +1,7 @@
 """ Entry point to run the experiments """
 
 import os
+import sys
 
 import numpy as np
 import torch
@@ -34,7 +35,7 @@ def get_preds(model, samples, masks, seed):
 def main(args):
     """ Entry point of the program; prints results.
 
-    :param args: ArgumentParser; arguments of the program
+    :param args: ArgumentParser; arguments of the program (see pipeline/argument_parser.py)
     """
     seeds = ([(dataset_seed, seed) for dataset_seed in args.dataset_seeds for seed in args.seeds]
              if len(args.dataset_seeds) > 0 else
@@ -62,15 +63,15 @@ def main(args):
                         imputed_train = get_preds(model, train_samples_missing, train_masks, seed=step)
                         res["RF"].append(
                             metrics.dml_metric(imputed_train, imputed, train_targets, test_targets, classif))
-            print(f"Seed {dataset_seed}.{seed} (dataset_seed, model_seed) results for the {dataset} dataset"
+            print(f"Seed {dataset_seed}.{seed} (dataset_seed, model_seed) results for the {dataset} dataset "
                   f"and the {args.model} model:")
             for metric, vals in res.items():
                 print(f"{metric}: Mean {np.mean(res[metric][-len(args.metric_steps):])} "
                       f"from values {res[metric][-len(args.metric_steps):]}")
         print(f"Final results for the {dataset} dataset and the {args.model} model:")
         for metric, vals in res.items():
-            print(f"{metric}: Mean {np.mean(vals)}, Std {np.std(vals, ddof=1)}")
+            print(f"{metric}: Mean {np.mean(vals)}, Std {np.std(vals, ddof=1) if len(vals) > 1 else 'NaN'}")
 
 
 if __name__ == "__main__":
-    main(argument_parser.get_args())
+    main(argument_parser.get_args(sys.argv[1:]))
