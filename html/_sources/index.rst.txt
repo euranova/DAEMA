@@ -10,7 +10,8 @@ Welcome to DAEMA's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   source/modules
+   source/src/modules
+   source/tests/modules
 
 
 
