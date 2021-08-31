@@ -9,6 +9,8 @@ Welcome to DAEMA's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   
+   source/modules
 
 
 
