@@ -1,0 +1,9 @@
+Seed 0.0 (dataset_seed, model_seed) results for the Boston dataset and the DAEMA model:
+NRMS: Mean 0.7397716045379639 from values [0.7397716]
+RF: Mean 0.472030332311535 from values [0.472030332311535]
+Seed 1.1 (dataset_seed, model_seed) results for the Boston dataset and the DAEMA model:
+NRMS: Mean 0.8259899616241455 from values [0.82598996]
+RF: Mean 0.48521875596696457 from values [0.48521875596696457]
+Final results for the Boston dataset and the DAEMA model:
+NRMS: Mean 0.7828807830810547, Std 0.060965582728385925
+RF: Mean 0.4786245441392498, Std 0.00932562379991531
